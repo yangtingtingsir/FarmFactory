@@ -1,6 +1,7 @@
  //"use strict";
 let slotGame;
 let slotConfig;
+let coinSpinAnim;
 
 // window loads event
 window.onload = function() {
@@ -52,7 +53,7 @@ class SlotGame extends Phaser.Scene{
          this.load.on('progress', function (value) {
              //console.log(value);
              progressBar.clear();
-             progressBar.fillStyle(0xA16AF7, 1);
+             progressBar.fillStyle(0xFFEA31, 1);
              progressBar.fillRect((slotGame.config.width / 2) -160, (slotGame.config.height / 2), 300 * value, 30);
          });
                      
@@ -88,21 +89,23 @@ class SlotGame extends Phaser.Scene{
                 this.load.image(s.name + 'Blurred', "png/SymbolsBlurred/" + s.fileNameBlurred);
             }
         });
-        slotConfig.symbols.forEach((s)=>{
-            if(s.animation != null) {
-                // if(this.textures.exists(s.name + 'Sheet')) this.textures.remove(s.name + 'Sheet');            // uncomment for game with multiple slot scenes
-                this.load.spritesheet(s.name + 'Sheet', "png/SymbolsSheet/" + s.animation, {frameWidth: slotConfig.frameWidth, frameHeight: slotConfig.frameHeight});
-            }
-        });
+//        slotConfig.symbols.forEach((s)=>{
+//            if(s.animation != null) {
+//                // if(this.textures.exists(s.name + 'Sheet')) this.textures.remove(s.name + 'Sheet');            // uncomment for game with multiple slot scenes
+//                this.load.spritesheet(s.name + 'Sheet', "png/SymbolsSheet/" + s.animation, {frameWidth: slotConfig.frameWidth, frameHeight: slotConfig.frameHeight});
+//            }
+//        });
+
+        this.load.spritesheet("coinspin", "png/CoinSheet.png", { frameWidth: 200, frameHeight: 200});
 
         // 2) loading sounds
-        this.load.audio('box_click_clip', ['audio/box_click.ogg', 'audio/box_click.mp3' ]);  // this.load.audio('wheel_spin_clip', 'audio/spin_sound.mp3'); this.load.audio('coins_clip', 'audio/win_coins.wav');
-        this.load.audio('wincoins_clip', ['audio/mixkit_win.wav']); // this.load.audio('win_clip', ['audio/win_sound.ogg','audio/win_sound.mp3']);
-        this.load.audio('button_click', ['audio/button.wav']); 
-        this.load.audio('spin_clip', ['audio/spin_sound.wav']); 
-        this.load.audio('win_clip', ['audio/win_coins.wav']);
-        this.load.audio('lose_clip', ['audio/lose.wav']);
-        this.load.audio('background_clip', ['audio/background.wav']);
+//        this.load.audio('box_click_clip', ['audio/box_click.ogg', 'audio/box_click.mp3' ]);  // this.load.audio('wheel_spin_clip', 'audio/spin_sound.mp3'); this.load.audio('coins_clip', 'audio/win_coins.wav');
+//        this.load.audio('wincoins_clip', ['audio/mixkit_win.wav']); // this.load.audio('win_clip', ['audio/win_sound.ogg','audio/win_sound.mp3']);
+//        this.load.audio('button_click', ['audio/button.wav']); 
+//        this.load.audio('spin_clip', ['audio/spin_sound.wav']); 
+//        this.load.audio('win_clip', ['audio/win_coins.wav']);
+//        this.load.audio('lose_clip', ['audio/lose.wav']);
+//        this.load.audio('background_clip', ['audio/background.wav']);
 
         // 3) loading bitmap fonts
         slotConfig.fonts.forEach((f)=>{this.load.bitmapFont(f.fontName, f.filePNG, f.fileXML);});
@@ -115,6 +118,7 @@ class SlotGame extends Phaser.Scene{
         this.winCoinsEvent = new MKEvent();
         this.endFreeGamesEvent = new MKEvent();
         this.freeSpinWinEvent = new MKEvent();
+        this.jackPotWinEvent = new MKEvent();
         this.startFreeGamesEvent = new MKEvent();
 
         // 1) main properties
@@ -136,15 +140,24 @@ class SlotGame extends Phaser.Scene{
         slotConfig.symbols.forEach((s)=>{if(s.fileName != null) this.symbolsDict[s.name] = s;});
         this.spinCount = 0;
 
+
         // 2) pay tables
         this.payTable = [];
         slotConfig.payLines.forEach((pLine)=>{ this.payTable.push(new PayLine(this, pLine.line, pLine.pay, pLine.freeSpins, slotConfig.wild)); });
         this.payTableFull = createFullPaytable(this.payTable, this.useWild);
         console.log('paytable full length: ' + this.payTableFull.length);  // this.payTableFull.forEach((pLine)=>{console.log(pLine);});
         this.scatterPayTable = slotConfig.scatterPayTable;
-        
+
         // 3) create slot graphic
         slotConfig.createSlotGraphic(this);
+        coinSpinAnim = this.anims.create({            // create coin spin animation for particles  
+                        key: 'spin',
+                        frames: this.anims.generateFrameNumbers('coinspin'),
+                        frameRate: 16,
+                        repeat: -1
+                        });
+        this.coinParticles = this.add.particles('coinspin').setDepth(2000); // on top of all objects
+
 
         // 4) main objects
         this.slotPlayer = new SlotPlayer(slotConfig.defaultCoins); // default coins
@@ -152,17 +165,17 @@ class SlotGame extends Phaser.Scene{
         this.lineButtons = (slotConfig.createLineButtons) ? slotConfig.createLineButtons(this) : null;  // add line buttons - optional
         this.soundController = new SoundController(this);
         this.guiController = new GuiController(this);
-        this.slotControls = new SlotControls(this, this.slotPlayer, slotConfig.lines, slotConfig.lineColor, slotConfig.lineBetMaxValue);
-        this.winController = new WinController(this, this.slotControls.linesController, slotConfig.useScatter, slotConfig.scatter, slotConfig.winShowTime);
+        this.slotControls = new SlotControls(this, this.slotPlayer, slotConfig.lines, slotConfig.lineColor, slotConfig.lineBetMaxValue, slotConfig.jackpot.defaultAmount);
+        this.winController = new WinController(this, this.slotControls.linesController, slotConfig.useScatter, slotConfig.scatter, slotConfig.jackpot, slotConfig.winShowTime);
    
         // 5) add sounds 
-        this.box_click_clip = this.sound.add('box_click_clip');
-        this.win_clip = this.sound.add('win_clip');
-        this.button_click = this.sound.add('button_click');
-        this.spin_clip = this.sound.add('spin_clip');
-        this.wincoins_clip = this.sound.add('wincoins_clip');
-        this.lose_clip = this.sound.add('lose_clip');
-        this.background_clip = this.sound.add('background_clip');
+//        this.box_click_clip = this.sound.add('box_click_clip');
+//        this.win_clip = this.sound.add('win_clip');
+//        this.button_click = this.sound.add('button_click');
+//        this.spin_clip = this.sound.add('spin_clip');
+//        this.wincoins_clip = this.sound.add('wincoins_clip');
+//        this.lose_clip = this.sound.add('lose_clip');
+//        this.background_clip = this.sound.add('background_clip');
  
         // 6) controls
         slotConfig.createControls(this, this.slotControls);
@@ -196,19 +209,25 @@ class SlotGame extends Phaser.Scene{
         this.soundController.playMusic('background_clip');
 
         // 10) debug
-        // this.fpsText = this.add.bitmapText(this.centerX, this.centerY - 500, 'gameFont', 'fps: ', 40, 1).setOrigin(0.5);
+        // this.fpsText = this.add.bitmapText(this.centerX, this.centerY - 520, 'gameFont_0', 'fps: ', 40, 1).setOrigin(0.5);
 
         // 11) tests
         //  this.showWinCoinsMessage(20, 20000);
-        /*
-         var wMess = this.guiController.showMessageYNC('Congratulation!', 'Your win: ' + 20 + ' coins!', this, 
+
+        /*       
+         var wMess = this.guiController.showMessageYNC('CONGRATULATION!', 'YOUR WIN: ' + '20' + ' COINS!', this, 
          ()=>{this. guiController.closePopUp(wMess);}, ()=>{this. guiController.closePopUp(wMess);},()=>{this. guiController.closePopUp(wMess);},);
-        */
+         */
 
         // var aboutPU = this.guiController.showPopUp(slotConfig.createAboutPUHandler);
-
         // var settingsPU = this.guiController.showPopUp(slotConfig.createSettingsPUHandler);
         // var infoPU = this.guiController.showPopUp(slotConfig.createInfoPUHandler);
+        // var fgPU = this.guiController.showPopUp(slotConfig.createFreeGamesPUHandler); fgPU.messageText.text = 5;
+        // var bwPU = this.guiController.showPopUp(slotConfig.createBigWinPUHandler); bwPU.messageText.text = 748;
+        // var hwPU = this.guiController.showPopUp(slotConfig.createHugeWinPUHandler); hwPU.messageText.text = 748;
+        // var mwPU = this.guiController.showPopUp(slotConfig.createMegaWinPUHandler); mwPU.messageText.text = 748;
+        // var jpwPU = this.guiController.showPopUp(slotConfig.createJackpotWinPUHandler); jpwPU.messageText.text = 11748;
+        // this.showCoins(true);
     }
 
     update(time, delta) // https://newdocs.phaser.io/docs/3.52.0/focus/Phaser.Scene-update
@@ -217,7 +236,7 @@ class SlotGame extends Phaser.Scene{
         simpleTweener.update(delta);
         this.updateEvent.events.forEach((eW)=>{ if (eW != null && eW.action != null) eW.action.call(eW.context, time, delta); });
 
-        // this.fpsText.text = 'fps: ' + Math.round(slotGame.loop.actualFps);
+        if (this.fpsText) this.fpsText.text = 'fps: ' + Math.round(slotGame.loop.actualFps);    // for debugging puposes only, can be disabled
     }
 
     runSlot()
@@ -237,6 +256,7 @@ class SlotGame extends Phaser.Scene{
         if(this.winCorout !== null) this.winCorout.stop();
         if(this.freeInputWinCorout !== null) this.freeInputWinCorout.stop();
         this.lampsBlink(false);
+        this.slotControls.addJackpotAmount(slotConfig.jackpot.increaseValue);
 
         // 1) start spin sound
         this.soundController.stopSounds(); // this.soundController.stopAll(); 
@@ -263,6 +283,9 @@ class SlotGame extends Phaser.Scene{
             {
                 lineCoins = this.winController.getLineWinCoins();
                 scatterCoins = this.winController.getScatterWinCoins();
+                jpCoins = this.winController.getJackpotWinCoins();
+                if(jpCoins > 0) this.jackPotWinEvent.events.forEach((eW)=>{if (eW != null && eW.action != null) eW.action.call(eW.context, wjpCoins);}); 
+
                 if (this.useLineBetMultiplier) 
                 {
                     lineCoins *= this.slotControls.lineBet;
@@ -324,7 +347,7 @@ class SlotGame extends Phaser.Scene{
             yield null;
         }
 
-        // 3b0 ---- show particles, line flasing  -----------
+        // 3b0 ---- show particles, line flashing  -----------
         let winShowEnd = false;
         this.winController.winSymbolShowOnce(()=>{ winShowEnd = true; });
 
@@ -337,13 +360,23 @@ class SlotGame extends Phaser.Scene{
         }
 
         //3c0 -----------------calc coins -------------------
+        let jpCoins = this.winController.getJackpotWinCoins();
         let winCoins = this.winController.getLineWinCoins() + this.winController.getScatterWinCoins();
         if (this.useLineBetMultiplier) winCoins *= this.slotControls.lineBet;
-        this.slotPlayer.setWinCoinsCount(winCoins);
-        this.slotPlayer.addCoins(winCoins);
+        this.slotPlayer.setWinCoinsCount(winCoins + jpCoins);
+        this.slotPlayer.addCoins(winCoins + jpCoins);
+       
         while(this.miniGame !== null || !this.guiController.hasNoPopUp())
         {
             yield null;
+        }
+
+        console.log('jackpot win : ' + jpCoins);
+        if(jpCoins > 0)
+        {      
+            this.showJackpotWinMessage(jpCoins, slotConfig.winMessageTime * 2);
+            this.soundController.playClip('wincoins_clip', false);    
+            this.slotControls.resetJackpot();     
         }
 
         //3c1 ----------- calc free spins ----------------
@@ -356,13 +389,13 @@ class SlotGame extends Phaser.Scene{
         if(bigWin)
         { 
             console.log('big win congratulation : ' + winCoins);
-            this.showBigWinMessage(winCoins);
+            this.showBigWinMessage(winCoins, slotConfig.winMessageTime * 2);
             this.soundController.playClip('wincoins_clip', false);         
         }
         else if(winCoins > 0 )
         { 
             console.log('win coins congratulation : ' + winCoins);
-            this.showWinCoinsMessage(winCoins, slotConfig.winMessageTime);
+            if(slotConfig.showWinCoinsMessage) this.showWinCoinsMessage(winCoins, slotConfig.winMessageTime);
             this.soundController.playClip('wincoins_clip', false);
         }
 
@@ -544,9 +577,11 @@ class SlotGame extends Phaser.Scene{
         sA_1.start();
     }
 
-    showBigWinMessage(winCoins)
+    showBigWinMessage(winCoins, time)
     {
-        var wMess = this.guiController.showMessage('Congratulation!', 'Big win: ' + winCoins + ' coins!', this, ()=>{this. guiController.closePopUp(wMess);});
+        var bwPU = this.guiController.showPopUp(slotConfig.createBigWinPUHandler);
+        bwPU.messageText.text = winCoins;
+        if(time && time > 0) this.timeoutMess = setTimeout(()=>{this. guiController.closePopUp(bwPU); if(this.timeoutMess) clearTimeout(this.timeoutMess);}, time);
     }
 
     showWinCoinsMessage(winCoins, time)
@@ -569,6 +604,17 @@ class SlotGame extends Phaser.Scene{
             if(time && time > 0) this.timeoutMess = setTimeout(()=>{this. guiController.closePopUp(wMess);}, time);
     }
 
+    showJackpotWinMessage(winCoins, time)
+    {
+        var jpPU = this.guiController.showPopUp(slotConfig.createJackpotWinPUHandler);
+        jpPU.messageText.text = winCoins;
+        this.showCoins(true);
+        if(time && time > 0) this.timeoutMessJP = setTimeout(()=>{
+            this. guiController.closePopUp(jpPU); 
+            this.showCoins(false); 
+            if(this.timeoutMessJP) clearTimeout(this.timeoutMessJP);}, time);
+    }
+
     lampsBlink(blink)
     {
         if(!this.lampsArray) return;
@@ -587,6 +633,33 @@ class SlotGame extends Phaser.Scene{
             this.lampsArray.forEach((l)=>{l.setOn(true);});
             this.lampsIntervalID = null;
        }
+    }
+
+    // show coins particles
+    showCoins(show)
+    {
+        if(show && this.coinParticles){
+        this.coinsEmitter = this.coinParticles.createEmitter({
+            x: this.centerX,
+            y: -100,
+            frame: 0,
+            quantity: 3,
+            frequency: 200,
+            angle: { min: -30, max: 30 },
+            speedX:  { min: -200, max: 200 },
+            speedY: { min: -100, max: -200 },
+            scale: { min: 0.3, max: 0.5 },
+            gravityY: 400,
+            lifespan: { min: 10000, max: 15000 },
+            particleClass: AnimatedCoinParticle
+        });
+    }
+    else {
+        if(this.coinsEmitter!=null)
+            {
+                this.coinsEmitter.stop();
+            }
+        }
     }
 }
 

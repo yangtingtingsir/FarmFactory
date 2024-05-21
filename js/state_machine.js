@@ -1,3 +1,4 @@
+// v1.0 08.01.2024
 class PreSpinState
 {
     constructor(scene, stateMachine)
@@ -105,7 +106,7 @@ class PreSpinState
     //region old
     handleInput()
     {
-        handleInput();
+      //  handleInput();
     }
 
     physicsUpdate()
@@ -201,7 +202,7 @@ class AutoSpinState
         }
 
         this.slotControls.setSpinButtonText("SPIN");
-        this.slotControls.setControlActivity(false, true, false);
+        this.slotControls.setControlActivity(false, true, true);
         console.log(this.toString() + " - run auto spin");
         this.slotControls.applyBet();
         this.stateObject.runSlot();
@@ -234,16 +235,19 @@ class AutoSpinState
     longPressSpin_Click()
     {
         this.slotControls.resetAutoSpinsMode();
+        this.slotControls.setControlActivity(false, false, false);      // activity, spinButtonAcivity, autoSpinButtonAcivity
     }
 
     spin_Click()
     {
         this.slotControls.resetAutoSpinsMode();
+        this.slotControls.setControlActivity(false, false, false);      // activity, spinButtonAcivity, autoSpinButtonAcivity
     }
 
     autoSpin_Click()
     {
         this.slotControls.resetAutoSpinsMode();
+        this.slotControls.setControlActivity(false, false, false);      // activity, spinButtonAcivity, autoSpinButtonAcivity
     }
     //endregion input
 
@@ -485,7 +489,7 @@ class FreeSpinState
         {
             this.autoSpinButton.clickEvent.add(this.autoSpin_Click, this);
         }
-        this.slotControls.setControlActivity(false, this.slotControls.auto, false);      // activity, spinButtonAcivity, autoSpinButtonAcivity
+        this.slotControls.setControlActivity(false, this.slotControls.auto, this.slotControls.auto);      // activity, spinButtonAcivity, autoSpinButtonAcivity
         console.log(this.toString() + "  - run free spin");
         this.stateObject.isFreeSpin = true;
         this.slotControls.applyFreeSpin();
@@ -765,7 +769,7 @@ class WinState
         this.slotControls.setSpinButtonText(this.slotControls.freeSpins > 0 ? this.slotControls.freeSpins : "SPIN");
 
         // control activity
-        this.slotControls.setControlActivity(false, this.slotControls.auto, false);                                 // activity, spinButtonAcivity, autoSpinButtonAcivity
+        this.slotControls.setControlActivity(false, this.slotControls.auto, this.slotControls.auto);                                 // activity, spinButtonAcivity, autoSpinButtonAcivity
         if(this.stateObject.isCascadeSpin) this.stateObject.winShow(() => {this.stateMachine.changeState(this.stateObject.preSpinState);});            // winshow -> prespin state -> cascade spin
         else this.stateObject.winShow(() => {this.stateMachine.changeState(this.stateObject.freeInputWinState);});
     }

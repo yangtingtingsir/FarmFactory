@@ -199,17 +199,14 @@ class SlotSymbol
         this.sprite.setTexture(this.blur ? this.blurTexture : this.normalTexture);
         this.sprite.name = icon;
     }
-
+//修改变化变化图片的地方
     showAnim(show)
     {
         if(show)
         {
-            if(this.anim == null)
-            {
-                this.sprite.setVisible(false);
-                this.anim = this.scene.add.sprite(this.sprite.x, this.posY, this.sprite.name + 'Sheet').setOrigin(0.5).play({ key: this.sprite.name + 'anim'});  // , frameRate : this.frameRate
-                this.anim.depth = 10;
-            }
+            this.sprite.setVisible(true);
+            if(this.anim !== null){ this.anim.stop();  this.anim.destroy();}
+            this.anim = null;
         }
 
         else
@@ -271,7 +268,7 @@ class Reel{
         var shape = this.scene.make.graphics();
         shape.fillStyle(0xffffff);
         shape.beginPath();
-        shape.fillRect(this.posX - this.symbolSizeY * 0.6, this.windowPosY + this.symbolSizeY * 0.52,  this.symbolSizeY * 1.2, -this.windowsCount * this.symbolSizeY * 1.04);
+        shape.fillRect(this.posX - this.symbolSizeY * 0.6, this.windowPosY + this.symbolSizeY * 0.5,  this.symbolSizeY * 1.2, -this.windowsCount * this.symbolSizeY * 1.0);
         var gMask = shape.createGeometryMask();
          /*       */
         for(var si = 0; si < this.symbOrder.length; si++)
@@ -303,7 +300,7 @@ class Reel{
          // set random start position
          if (this.randomStartPosition)
          {
-             this.nextOrderPosition =  getRandomOrderPosition();
+             this.nextOrderPosition =  this.getRandomOrderPosition();
              var distY = this.getDistToNextSymb(this.nextOrderPosition);
              this.symbolsMove(0, distY);
              this.currOrderPosition = this.nextOrderPosition;
@@ -313,7 +310,7 @@ class Reel{
         this.canSpin = true;
 
         this.symbols.forEach((s)=>{s.setVisible(s.posY <= this.visibleMaxY && s.posY >= this.visibleMinY);});
-        this.scene.updateEvent.add(this.update, this);
+        // this.scene.updateEvent.add(this.update, this);
     }
 
     spin(nextOrderPosition, completeCallBack)   // spin down
@@ -807,19 +804,23 @@ class LinesController{
 
 class WinController
 {
-    constructor(scene, linesController, useScatter, scatter, winShowTime)
+    constructor(scene, linesController, useScatter, scatter, jackpot, winShowTime)
     {
         this.scene = scene;
         this.linesController = linesController;
         this.scatter = scatter;
         this.useScatter = (useScatter && scatter !== null);
+        this.jackpot = jackpot;
+        this.useJackpot = (jackpot !== null);
         this.winShowTime = winShowTime;
         this.payTable = this.scene.payTableFull;
         this.scatterPayTable = this.scene.scatterPayTable;
         this.reels = this.scene.reels;
         this.scatterWin = null;
+        this.jackpotWin = null;
         this.winLines = [];
         this.scatterWinSymbols = [];
+        this.jackpotWinSymbols = [];
         this.winSeq = null;
 
     }
@@ -829,7 +830,8 @@ class WinController
     {
         var hasLineWin = (this.winLines.length > 0);
         var hasScatterWin = (this.scatterWin !== null);
-        return (hasLineWin || hasScatterWin);
+        var hasJpWin = (this.jackpotWin !== null);
+        return (hasLineWin || hasScatterWin || hasJpWin);
     }
 
     searchWinSymbols()
@@ -850,7 +852,6 @@ class WinController
 
         // search scatters
         this.scatterWinSymbols = [];
-
         this.scatterWin = null;
 
         if (this.useScatter)
@@ -869,8 +870,28 @@ class WinController
                     this.scatterWin = new WinData(this.scatterWinSymbols, sPL.freeSpins, sPL.pay);
                 }
             });
+            if (this.scatterWin == null) this.scatterWinSymbols = [];
         }
-        if (this.scatterWin == null) this.scatterWinSymbols = [];
+
+        // search jackpot
+        this.jackpotWinSymbols = [];
+        this.jackpotWin = null;
+        console.log('use Jackpot: ' + this.useJackpot);
+        if (this.useJackpot)
+        {
+            this.reels.forEach((reel)=>
+            {
+                var temp = reel.findWindowsSymbols(this.jackpot.symbolName);
+                if(temp.length > 0) this.jackpotWinSymbols.push(...temp);
+            });
+            console.log('find Jackpot symbols: ' + this.jackpotWinSymbols.length);
+            if (this.jackpot.symbolsCount > 0 && this.jackpot.symbolsCount  == this.jackpotWinSymbols.length)
+            {
+                this.jackpotWin = new WinData(this.jackpotWinSymbols, 0, this.scene.slotControls.jackpotAmount);
+            }
+
+            if (this.jackpotWin == null) this.jackpotWinSymbols = [];
+        }
     }
 
     hasScatterWin()
@@ -878,10 +899,38 @@ class WinController
         return this.scatterWin != null;
     }
 
+    hasJackpotWin()
+    {
+        return this.jackpotWin != null;
+    }
+
     winSymbolShowOnce(completeCallBack)
     {
         if (this.winSeq != null) this.winSeq.break();
         this.winSeq = new SequencedActions();
+
+        //show jackpot win 
+        if (this.useJackpot && this.jackpotWinSymbols != null && this.jackpotWinSymbols.length > 0)
+        {
+            var pAj = new ParallelActions();
+            this.jackpotWinSymbols.forEach((s)=>{
+
+                pAj.add((callBack) =>
+                {
+                    s.showAnim(true); // s.showWinPrefab();
+                    new SimpleTweenFloat(this, 0, 1, 3000, (p, dp) =>{ },  callBack); // just delay action
+                });
+            });
+
+            this.winSeq.add((callBack) =>
+            {
+                pAj.start(() =>
+                {
+                    callBack();
+                });
+            });
+        }
+
 
         //show linewins - all paylines at the same time
         var pA = new ParallelActions();
@@ -957,6 +1006,11 @@ class WinController
         {
             this.scatterWinSymbols.forEach((s)=>{s.showAnim(false);})
         }
+
+        if( this.jackpotWinSymbols !== null)
+        {
+            this.jackpotWinSymbols.forEach((s)=>{s.showAnim(false);})
+        }
         console.log('winShowCancel');
     }
     
@@ -965,6 +1019,8 @@ class WinController
         this.winLines.forEach((l)=>{ l.resetLineWinning();});
         this.scatterWinSymbols = null;
         this.scatterWin = null;
+        this.jackpotWinSymbols = null;
+        this.jackpotWin = null;
     }
 
     getLineWinCoins()
@@ -977,6 +1033,12 @@ class WinController
     getScatterWinCoins()
     {
         if (this.scatterWin !== null) return this.scatterWin.pay;
+        return 0;
+    }
+
+    getJackpotWinCoins()
+    {
+        if (this.jackpotWin !== null) return this.jackpotWin.pay;
         return 0;
     }
 
@@ -1124,6 +1186,9 @@ class SlotPlayer{
         this.changeLevelProgressEvents = [];
         this.levelUpReward = 0;
         this.useLevelUpReward = false;
+        this.minWin = 200;                      // to show big, mega, huge popup
+        this.useBigWinCongratulation = true;    // to show big, mega, huge popup
+        this.loadCoins();
     }
 
     addCoins(count)
@@ -1139,7 +1204,15 @@ class SlotPlayer{
         if (changed) 
         {
             this.changeCoinsEvents.forEach((eW)=>{ if (eW!=null && eW.action!=null) eW.action.call(eW.context, this.coins); });
+           // localStorage.setItem('mk_china_bl_amount', this.coins); // save coins
         }
+    }
+
+    loadCoins()
+    {
+        var amount = this.defaultCoins;
+       // amount = parseInt(localStorage.getItem('mk_china_bl_amount')) || this.defaultCoins; // load https://www.dynetisgames.com/2018/10/28/how-save-load-player-progress-localstorage/
+        this.setCoinsCount(amount);
     }
 
     addChangeCoinsEvent(event, context)
@@ -1240,7 +1313,7 @@ class SlotPlayer{
 
 class SlotControls
 {
-    constructor(scene, slotPlayer, linesData, lineColor, lineBetMaxValue)
+    constructor(scene, slotPlayer, linesData, lineColor, lineBetMaxValue, jackpotDefaultAmount)
     {
         this.slotPlayer = slotPlayer;
         this.scene = scene;
@@ -1248,11 +1321,12 @@ class SlotControls
         this.lines = this.linesController.lines;
 
         // default settings
-        this.manualStop = false;
-        this.holdToAutoSpin = false;                     // hold spin button pressed 2 sec to start auto spin mode
+        this.manualStop = false;                        // 当前版本中不允许
+        this.holdToAutoSpin = false;                    // 按住旋转按钮2秒启动自动
         this.maxLineBet = lineBetMaxValue;
         this.defaultLineBet = 1;
         this.autoPlayFreeSpins = true;
+        this.jackpotDefaultAmount = jackpotDefaultAmount;
 
         // slot input parameters
         this.lineBet = 1;
@@ -1261,10 +1335,11 @@ class SlotControls
         this.freeSpins = 0;
         this.auto = false;
         this.autoSpinsCounter = 0;
+        this.jackpotAmount = 0;
 
         // slot input controls
         this.hold = null;
-        this.buttons = [];                  // all control buttons array
+        this.buttons = [];                  // 所有控制按钮array
 
         // slot output controls
         this.freeSpinText = null;           // freeSpinText;
@@ -1279,6 +1354,7 @@ class SlotControls
         this.changeAutoSpinsCounterEvent = new MKEvent();
         this.changeAutoSpinModeEvent = new MKEvent();
         this.tryToSetAutoSpinModeEvent = new MKEvent();
+        this.changeJackpotEvent = new MKEvent();
 
         // set event handlers
         this.changeFreeSpinsEvent.add(this.changeFreeSpinsHandler, this);
@@ -1287,6 +1363,7 @@ class SlotControls
         this.changeSelectedLinesEvent.add(this.changeSelectedLinesHandler, this); 
         this.slotPlayer.addWinCoinsChangeEvent(this.changeWinCoinsHandler, this);
         this.slotPlayer.addChangeCoinsEvent(this.changeCreditCoinsHandler, this);
+        this.changeJackpotEvent.add(this.changeJackpotHandler, this); 
     }
 
     init(selectLines, burn)
@@ -1302,6 +1379,7 @@ class SlotControls
         {
             this.setSelectedLinesCount(1, burn);
         }
+        this.loadJackpot();
         this.refresh();
     }
 
@@ -1481,7 +1559,7 @@ class SlotControls
 
     changeCreditCoinsHandler(newCount)
     {
-       if(this.creditSumText != null) this.creditSumText.text = '$' + newCount;
+       if(this.creditSumText != null) this.creditSumText.text = ' ' + newCount;
     }
 
     addLineBet(count)
@@ -1605,11 +1683,46 @@ class SlotControls
 
     setSpinButtonText(text)
     {
-        if(this.spinText != null) this.spinText.text = text;
+        if(this.spinText != null) this.spinText.text = "";
     }
 
     getTotalBet()
     {
         return this.selectedLinesCount * this.lineBet * this.holdMultiplier;
     }
+
+    /*Jackpot */
+    setJackpotAmount(amount)
+    {
+        amount = Math.max(0, amount);
+        var changed = (this.jackpotAmount != amount);
+        this.jackpotAmount = amount;
+        if (changed) 
+        {
+            this.changeJackpotEvent.events.forEach((eW)=>{ if (eW != null && eW.action != null) eW.action.call(eW.context, this.jackpotAmount);});
+          //  localStorage.setItem('mk_china_jp_amount', this.jackpotAmount); // save https://www.dynetisgames.com/2018/10/28/how-save-load-player-progress-localstorage/
+        }
+    }
+
+    addJackpotAmount(amount)
+    {
+        this.setJackpotAmount(this.jackpotAmount + amount);
+    }
+
+    loadJackpot()
+    {
+        var amount = this.jackpotDefaultAmount;
+      //  amount = parseInt(localStorage.getItem('mk_china_jp_amount')) || this.jackpotDefaultAmount; // load https://www.dynetisgames.com/2018/10/28/how-save-load-player-progress-localstorage/
+        this.setJackpotAmount(amount);
+    }
+
+    resetJackpot()
+    {
+        this.setJackpotAmount(this.jackpotDefaultAmount);
+    }
+
+    changeJackpotHandler(newAmount)
+    {
+        if (this.jackpotAmountText != null) this.jackpotAmountText.text = newAmount;
+    }   
 }
