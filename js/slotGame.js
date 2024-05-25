@@ -47,12 +47,12 @@ class SlotGame extends Phaser.Scene{
          var progressBox = this.add.graphics();
          progressBar.depth = 20;
          progressBox.depth = 19;
-         progressBox.fillStyle(0x222222, 1);//进度条颜色
+         progressBox.fillStyle(0x888888, 1);//进度条颜色
          progressBox.fillRect((slotGame.config.width / 2) - 10 - 160, (slotGame.config.height / 2) - 10, 320, 50);
  
          this.load.on('progress', function (value) {
              progressBar.clear();
-             progressBar.fillStyle(0xFFEA31, 1);
+             progressBar.fillStyle(0x000088, 1);
              progressBar.fillRect((slotGame.config.width / 2) -160, (slotGame.config.height / 2), 300 * value, 30);
          });
                      
