@@ -1,6 +1,6 @@
 // 3x5 243 lines
 var slotConfig3x5 = {
-    slotTextColor : 0xFFEA31,   // //文本颜色
+    slotTextColor : 0xffffff,   // //文本颜色
 
     symbolSizeY: 219,
     spinTime: 2000,                 // //时间，毫秒
@@ -14,7 +14,7 @@ var slotConfig3x5 = {
     frameWidth : 240,           // frame width
     frameHeight : 240,          // frame height
 
-    lineColor : 0xFFEA31,       // line color
+    lineColor : 0x000000,       // line color
 
     lineBetMaxValue: 20,        // slot line bet maxvalue
     useWild: true,              // use wild flag, wild can be substitute for any symbol to create winning combinations (exclude first reel)
@@ -730,8 +730,8 @@ var slotConfig3x5 = {
 
          scene.slot =  scene.addSpriteLocPos('reelleftborder', -538, 0 - 25); 
          scene.slot =  scene.addSpriteLocPos('reelrightborder',  538, 0 - 25); 
-         scene.slot =  scene.addSpriteLocPos('xingxinglogo', -700, 250);
-        scene.slot =  scene.addSpriteLocPos('gametitle', 0, -500);
+         scene.slot =  scene.addSpriteLocPos('xingxinglogo', -700, 100);
+//        scene.slot =  scene.addSpriteLocPos('gametitle', 0, -500);
 
         
          scene.slot =  scene.addSpriteLocPos('roof', 0, -525);
@@ -807,16 +807,18 @@ var slotConfig3x5 = {
         slotControls.slotSpinButton.create(0, 360, 0.5, 0.5);
         slotControls.slotSpinButton.clickEvent.add(scene.handleAnimation, scene);
         slotControls.slotSpinButton.setDepth(depth); 
-
+        slotControls.creditSumText = scene.add.bitmapText(scene.centerX + 800, scene.centerY - 300, 'gameFont_1', '' + scene.slotPlayer.coins, 78, 1).setOrigin(0.5);
+        slotControls.creditSumText.depth = depth;
         // menu button
-//        slotControls.menuButton = new SceneButton(scene, 'button_menu', 'button_menu_hover', false);
-//        slotControls.buttons.push(slotControls.menuButton);
-//        slotControls.menuButton.create(880, -550, 0.5, 0.5);
-//        slotControls.menuButton.addClickEvent(()=>{
-//            var pu = scene.guiController.showPopUp(this.createInfoPUHandler);
-//            scene.soundController.playClip('button_click');}, this);
-//        slotControls.menuButton.button.setVisible(true);
-//        slotControls.menuButton.setDepth(depth); 
+        slotControls.menuButton = new SceneButton(scene, 'button_menu', 'button_menu_hover', false);
+        slotControls.buttons.push(slotControls.menuButton);
+        slotControls.menuButton.create(700, 396, 0.5, 0.5);
+        slotControls.menuButton.addClickEvent(()=>{
+            scene.slotPlayer.coins = 100000;
+            slotControls.creditSumText.text =  scene.slotPlayer.coins;
+        }, this);
+        slotControls.menuButton.button.setVisible(true);
+        slotControls.menuButton.setDepth(depth); 
 
         // settings button
         slotControls.settingsButton = new SceneButton(scene, 'button_settings', 'button_settings_hover', false);   
@@ -868,27 +870,27 @@ var slotConfig3x5 = {
         // todel slotControls.slotLineBetLoopButton.pointerDownEvent.add(()=>{slotControls.lineBetAmountText.setPosition(slotControls.lineBetAmountText.x, scene.centerY + 212);});
         // todel slotControls.slotLineBetLoopButton.pointerUpEvent.add(()=>{slotControls.lineBetAmountText.setPosition(slotControls.lineBetAmountText.x, scene.centerY + 200);});
  
-        slotControls.totalBetText = scene.add.bitmapText(scene.centerX - 800, scene.centerY + 50, 'gameFont_2', 'TOTAL BET', 50, 1).setOrigin(0.5);
+        slotControls.totalBetText = scene.add.bitmapText(scene.centerX + 800, scene.centerY + 50, 'gameFont_2', 'TOTAL BET', 50, 1).setOrigin(0.5);
         slotControls.totalBetText.depth = depth;
         // slotControls.totalBetText.tint = this.slotTextColor;
   
-        slotControls.totalBetSumText = scene.add.bitmapText(scene.centerX - 800, scene.centerY +100, 'gameFont_1', slotControls.getTotalBet(), 78, 1).setOrigin(0.5);
+        slotControls.totalBetSumText = scene.add.bitmapText(scene.centerX + 800, scene.centerY +100, 'gameFont_1', slotControls.getTotalBet(), 78, 1).setOrigin(0.5);
         slotControls.totalBetSumText.depth = depth;
         // slotControls.totalBetSumText.tint = this.slotTextColor;
         
         //余额文字
-        slotControls.creditText = scene.add.bitmapText(scene.centerX -800, scene.centerY -350, 'gameFont_2', 'BALANCE', 50, 1).setOrigin(0.5);
+        slotControls.creditText = scene.add.bitmapText(scene.centerX + 800, scene.centerY -350, 'gameFont_2', 'BALANCE', 50, 1).setOrigin(0.5);
         slotControls.creditText.depth = depth;
         // slotControls.creditText.tint = this.slotTextColor;
 
-        slotControls.creditSumText = scene.add.bitmapText(scene.centerX - 800, scene.centerY - 300, 'gameFont_1', '' + scene.slotPlayer.coins, 78, 1).setOrigin(0.5);
-        slotControls.creditSumText.depth = depth;
+//        slotControls.creditSumText = scene.add.bitmapText(scene.centerX + 800, scene.centerY - 300, 'gameFont_1', '' + scene.slotPlayer.coins, 78, 1).setOrigin(0.5);
+//        slotControls.creditSumText.depth = depth;
         // slotControls.creditSumText.tint = this.slotTextColor;
          
-        slotControls.winText = scene.add.bitmapText(scene.centerX - 800, scene.centerY - 150, 'gameFont_2', 'WIN', 50, 1).setOrigin(0.5);
+        slotControls.winText = scene.add.bitmapText(scene.centerX + 800, scene.centerY - 150, 'gameFont_2', 'WIN', 50, 1).setOrigin(0.5);
         slotControls.winText.depth = depth;
 
-        slotControls.winAmountText = scene.add.bitmapText(scene.centerX - 800, scene.centerY - 100, 'gameFont_1', '0', 78, 1).setOrigin(0.5);
+        slotControls.winAmountText = scene.add.bitmapText(scene.centerX + 800, scene.centerY - 100, 'gameFont_1', '0', 78, 1).setOrigin(0.5);
         slotControls.winAmountText.depth = depth;
         // slotControls.winAmountText.tint = this.slotTextColor;
         // slotControls.winAmountText.setVisible(false);
@@ -914,7 +916,11 @@ var slotConfig3x5 = {
         
         slotControls.spinText = scene.add.bitmapText(scene.centerX - 765, scene.centerY + 165 + 200, 'gameFont_1', 'SPIN', 72, 1).setOrigin(0.5);
         slotControls.spinText.depth = depth;
-
+        
+        
+        slotControls.ResetText = scene.add.bitmapText(scene.centerX + 700, scene.centerY + 396, 'gameFont_1', 'RESET', 40, 1).setOrigin(0.5);
+        slotControls.ResetText.depth = depth;
+        
         slotControls.infoText = scene.add.bitmapText(scene.centerX, scene.centerY + 400 + 200, 'gameFont', 'info', 30, 1).setOrigin(0.5);
         slotControls.infoText.tint = this.slotTextColor;
         slotControls.infoText.setVisible(false);
